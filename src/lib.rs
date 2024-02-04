@@ -1,8 +1,10 @@
+#![cfg_attr(feature = "nostd", no_std)]
+
 
 #[cfg(feature = "std")]
 use std::sync::atomic::*;
 
-use std::{fmt::Debug, ops::Add};
+use core::{fmt::Debug, ops::Add};
 
 #[cfg(all(feature = "rand", feature = "std"))]
 use rand::Rng;
@@ -81,7 +83,7 @@ macro_rules! counter {
                 }
 
                 fn reset(&self) {
-                    self.count.store(<$primitive>::ZERO, std::sync::atomic::Ordering::Relaxed)
+                    self.count.store(<$primitive>::ZERO, Ordering::Relaxed)
                 }
 
                 fn load(&self) -> $primitive {

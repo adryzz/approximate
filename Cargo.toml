@@ -20,4 +20,8 @@ nostd = ["dep:atomic"]
 
 [[example]]
 name = "test"
-features = ["default"]
+
+# testing no_std counters with thread rng
+[[example]]
+name = "nostd-test"
+required-features = ["nostd", "rand", "rand/std"]
