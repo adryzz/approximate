@@ -14,15 +14,9 @@ pub struct ApproximateAtomic<T> where T : Countable {
 impl<T> ApproximateAtomic<T> where T : Countable {
     /// Creates a new [ApproximateAtomic], with a value of 0
     pub fn new() -> Self {
-        Self { count: Default::default() }
+        Self { count: T::Atomic::new(<T::Atomic as Atomic>::Ticket::ZERO) }
     }
 }
-
-/*impl<T> From<T::Ticket> for ApproximateAtomic<T> where T : AtomicCounter {
-    fn from(value: T::Ticket) -> Self {
-        Self { count: value }
-    }
-}*/
 
 /// This trait represents all the possible operations on an [ApproximateAtomic]
 pub trait AtomicCounter {
@@ -41,6 +35,7 @@ pub trait Atomic : Debug + Default {
     fn fetch_add(&self, value: Self::Ticket, order: Ordering) -> Self::Ticket;
     fn load(&self, order: Ordering) -> Self::Ticket;
     fn store(&self, value: Self::Ticket, order: Ordering);
+    fn new(value: Self::Ticket) -> Self;
 }
 
 macro_rules! counter {
@@ -90,6 +85,9 @@ macro_rules! counter {
                 fn store(&self, value: Self::Ticket, order: Ordering) {
                     self.store(value, order)
                 }
+                fn new(value: Self::Ticket) -> Self {
+                    <$atomic>::new(value)
+                }
             }
 
             impl Countable for $primitive {
@@ -97,6 +95,12 @@ macro_rules! counter {
                 const ZERO: $primitive = 0;
                 const ONE: $primitive = 1;
                 const BITSM: u32 = <$primitive>::BITS - 1;
+            }
+
+            impl From<$primitive> for ApproximateAtomic<$primitive> {
+                fn from(value: $primitive) -> Self {
+                    Self { count: <$atomic>::new(value) }
+                }
             }
         )*
     };
