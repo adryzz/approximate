@@ -17,25 +17,25 @@ use atomic::*;
 /// 
 /// Very useful for statistic displays in hot loops.
 #[derive(Debug)]
-pub struct ApproximateAtomic<T> where T : Countable {
+pub struct ScalableCounter<T> where T : Countable {
     count: T::Atomic,
     rng: fn() -> T
 }
 
-impl<T> ApproximateAtomic<T> where T : Countable {
+impl<T> ScalableCounter<T> where T : Countable {
     pub fn with_rng(rng: fn() -> T) -> Self {
         Self { count: T::Atomic::new(<T::Atomic as AtomicVal>::Ticket::ZERO), rng }
     }
 }
 
 #[cfg(all(feature = "rand", feature = "std"))]
-impl<T> Default for ApproximateAtomic<T> where T : Countable {
+impl<T> Default for ScalableCounter<T> where T : Countable {
     fn default() -> Self {
         Self { count: Default::default(), rng: T::thread_rng }
     }
 }
 
-/// This trait represents all the possible operations on an [ApproximateAtomic]
+/// This trait represents all the possible operations on an [ScalableCounter]
 pub trait AtomicCounter {
     /// The value held
     type Ticket : Countable;
@@ -58,7 +58,7 @@ pub trait AtomicVal : Debug + Default {
 macro_rules! counter {
     ($($atomic:ty : $primitive:ty;)*) => {
         $(
-            impl AtomicCounter for ApproximateAtomic<$primitive> {
+            impl AtomicCounter for ScalableCounter<$primitive> {
                 type Ticket = $primitive;
                 fn increment(&self) -> Self::Ticket {
                     let count = self.count.load(Ordering::Relaxed);
@@ -119,7 +119,7 @@ macro_rules! counter {
             }
 
             #[cfg(all(feature = "rand", feature = "std"))]
-            impl From<$primitive> for ApproximateAtomic<$primitive> {
+            impl From<$primitive> for ScalableCounter<$primitive> {
                 fn from(value: $primitive) -> Self {
                     Self { count: <$atomic>::new(value), rng: <$primitive>::thread_rng }
                 }

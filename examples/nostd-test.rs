@@ -3,12 +3,12 @@ use rayon::iter::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 use std::time::Instant;
 use atomic::*;
-use approximate::ApproximateAtomic;
+use approximate::ScalableCounter;
 use rand::*;
 
 /// This example uses thread RNG, but with a no_std counter.
 fn main() {
-    let count = ApproximateAtomic::<u128>::with_rng(thread_rng);
+    let count = ScalableCounter::<u128>::with_rng(thread_rng);
     
     let time = Instant::now();
     (0..1000000000).into_par_iter().for_each(|_| {count.increment();});

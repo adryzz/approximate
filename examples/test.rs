@@ -4,10 +4,10 @@ use rayon::iter::ParallelIterator;
 use std::time::Instant;
 use core::sync::atomic::Ordering;
 use core::sync::atomic::AtomicU32;
-use approximate::ApproximateAtomic;
+use approximate::ScalableCounter;
 
 fn main() {
-    let count = ApproximateAtomic::<u32>::default();
+    let count = ScalableCounter::<u32>::default();
     
     let time = Instant::now();
     (0..1000000000).into_par_iter().for_each(|_| {count.increment();});
