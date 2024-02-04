@@ -1,20 +1,28 @@
 use std::{sync::atomic::*, fmt::Debug, ops::Add};
 
+#[cfg(feature = "rand")]
 use rand::Rng;
 
 /// This represents an atomic counter that uses probability 
 /// to achieve faster operations, while still retaining a good accuracy.
 /// 
 /// Very useful for statistic displays in hot loops.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ApproximateAtomic<T> where T : Countable {
-    count: T::Atomic
+    count: T::Atomic,
+    rng: fn() -> T
 }
 
 impl<T> ApproximateAtomic<T> where T : Countable {
-    /// Creates a new [ApproximateAtomic], with a value of 0
-    pub fn new() -> Self {
-        Self { count: T::Atomic::new(<T::Atomic as Atomic>::Ticket::ZERO) }
+    pub fn with_rng(rng: fn() -> T) -> Self {
+        Self { count: T::Atomic::new(<T::Atomic as Atomic>::Ticket::ZERO), rng }
+    }
+}
+
+#[cfg(feature = "rand")]
+impl<T> Default for ApproximateAtomic<T> where T : Countable {
+    fn default() -> Self {
+        Self { count: Default::default(), rng: T::thread_rng }
     }
 }
 
@@ -51,7 +59,7 @@ macro_rules! counter {
             
                         if log_count >= 13 {
                             let delta = 1 << (log_count - 12);
-                            let rand: $primitive = rand::thread_rng().gen();
+                            let rand: $primitive = (self.rng)();
                             let update: bool = (rand & (delta - 1)) == 0;
             
                             if !update {
@@ -95,11 +103,17 @@ macro_rules! counter {
                 const ZERO: $primitive = 0;
                 const ONE: $primitive = 1;
                 const BITSM: u32 = <$primitive>::BITS - 1;
+
+                #[cfg(feature = "rand")]
+                fn thread_rng() -> $primitive {
+                    rand::thread_rng().gen()
+                }
             }
 
+            #[cfg(feature = "rand")]
             impl From<$primitive> for ApproximateAtomic<$primitive> {
                 fn from(value: $primitive) -> Self {
-                    Self { count: <$atomic>::new(value) }
+                    Self { count: <$atomic>::new(value), rng: <$primitive>::thread_rng }
                 }
             }
         )*
@@ -124,4 +138,6 @@ pub trait Countable where Self : Copy + Add + Debug + Default {
     const ZERO: Self;
     const ONE: Self;
     const BITSM: u32;
+    #[cfg(feature = "rand")]
+    fn thread_rng() -> Self;
 }
