@@ -55,7 +55,7 @@ macro_rules! counter {
                     let count = self.count.load(Ordering::Relaxed);
 
                     let delta = if count > 0 {
-                        let log_count = <$primitive>::BITSM - count.leading_zeros();
+                        let log_count = count.ilog2();
             
                         if log_count >= 13 {
                             let delta = 1 << (log_count - 12);
@@ -102,7 +102,6 @@ macro_rules! counter {
                 type Atomic = $atomic;
                 const ZERO: $primitive = 0;
                 const ONE: $primitive = 1;
-                const BITSM: u32 = <$primitive>::BITS - 1;
 
                 #[cfg(feature = "rand")]
                 fn thread_rng() -> $primitive {
@@ -137,7 +136,6 @@ pub trait Countable where Self : Copy + Add + Debug + Default {
     type Atomic : Atomic;
     const ZERO: Self;
     const ONE: Self;
-    const BITSM: u32;
     #[cfg(feature = "rand")]
     fn thread_rng() -> Self;
 }
