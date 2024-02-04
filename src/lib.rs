@@ -1,7 +1,14 @@
-use std::{sync::atomic::*, fmt::Debug, ops::Add};
 
-#[cfg(feature = "rand")]
+#[cfg(feature = "std")]
+use std::sync::atomic::*;
+
+use std::{fmt::Debug, ops::Add};
+
+#[cfg(all(feature = "rand", feature = "std"))]
 use rand::Rng;
+
+#[cfg(feature = "nostd")]
+use atomic::*;
 
 /// This represents an atomic counter that uses probability 
 /// to achieve faster operations, while still retaining a good accuracy.
@@ -15,11 +22,11 @@ pub struct ApproximateAtomic<T> where T : Countable {
 
 impl<T> ApproximateAtomic<T> where T : Countable {
     pub fn with_rng(rng: fn() -> T) -> Self {
-        Self { count: T::Atomic::new(<T::Atomic as Atomic>::Ticket::ZERO), rng }
+        Self { count: T::Atomic::new(<T::Atomic as AtomicVal>::Ticket::ZERO), rng }
     }
 }
 
-#[cfg(feature = "rand")]
+#[cfg(all(feature = "rand", feature = "std"))]
 impl<T> Default for ApproximateAtomic<T> where T : Countable {
     fn default() -> Self {
         Self { count: Default::default(), rng: T::thread_rng }
@@ -38,7 +45,7 @@ pub trait AtomicCounter {
     fn load(&self) -> Self::Ticket;
 }
 
-pub trait Atomic : Debug + Default {
+pub trait AtomicVal : Debug + Default {
     type Ticket : Countable;
     fn fetch_add(&self, value: Self::Ticket, order: Ordering) -> Self::Ticket;
     fn load(&self, order: Ordering) -> Self::Ticket;
@@ -82,7 +89,7 @@ macro_rules! counter {
                 }
             }
 
-            impl Atomic for $atomic {
+            impl AtomicVal for $atomic {
                 type Ticket = $primitive;
                 fn fetch_add(&self, value: Self::Ticket, order: Ordering) -> Self::Ticket {
                     self.fetch_add(value, order)
@@ -103,13 +110,13 @@ macro_rules! counter {
                 const ZERO: $primitive = 0;
                 const ONE: $primitive = 1;
 
-                #[cfg(feature = "rand")]
+                #[cfg(all(feature = "rand", feature = "std"))]
                 fn thread_rng() -> $primitive {
                     rand::thread_rng().gen()
                 }
             }
 
-            #[cfg(feature = "rand")]
+            #[cfg(all(feature = "rand", feature = "std"))]
             impl From<$primitive> for ApproximateAtomic<$primitive> {
                 fn from(value: $primitive) -> Self {
                     Self { count: <$atomic>::new(value), rng: <$primitive>::thread_rng }
@@ -119,6 +126,15 @@ macro_rules! counter {
     };
 }
 
+pub trait Countable where Self : Copy + Add + Debug + Default {
+    type Atomic : AtomicVal;
+    const ZERO: Self;
+    const ONE: Self;
+    #[cfg(all(feature = "rand", feature = "std"))]
+    fn thread_rng() -> Self;
+}
+
+#[cfg(feature = "std")]
 counter! {
     AtomicU8: u8;
     AtomicI8: i8;
@@ -132,10 +148,24 @@ counter! {
     AtomicIsize: isize;
 }
 
-pub trait Countable where Self : Copy + Add + Debug + Default {
-    type Atomic : Atomic;
-    const ZERO: Self;
-    const ONE: Self;
-    #[cfg(feature = "rand")]
-    fn thread_rng() -> Self;
+#[cfg(feature = "nostd")]
+counter! {
+    Atomic<u8>: u8;
+    Atomic<i8>: i8;
+    Atomic<u16>: u16;
+    Atomic<i16>: i16;
+    Atomic<u32>: u32;
+    Atomic<i32>: i32;
+    Atomic<u64>: u64;
+    Atomic<i64>: i64;
+    Atomic<usize>: usize;
+    Atomic<isize>: isize;
+    Atomic<u128>: u128;
+    Atomic<i128>: i128;
 }
+
+#[cfg(all(feature = "std", feature = "nostd"))]
+compile_error!("feature \"std\" and feature \"nostd\" cannot be enabled at the same time");
+
+#[cfg(all(not(feature = "std"), not(feature = "nostd")))]
+compile_error!("you need to enable at least one of \"std\" or \"nostd\"");

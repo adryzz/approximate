@@ -14,8 +14,9 @@ rayon = "1.8.1"
 
 [features]
 default = ["std", "rand"]
-std = ["dep:atomic", "rand?/std"]
+std = ["atomic?/std", "rand?/std"]
 rand = ["dep:rand"]
+nostd = ["dep:atomic"]
 
 [[example]]
 name = "test"
