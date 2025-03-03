@@ -114,7 +114,7 @@ macro_rules! counter {
 
                 #[cfg(all(feature = "rand", feature = "std"))]
                 fn thread_rng() -> $primitive {
-                    rand::thread_rng().gen()
+                    rand::rng().random()
                 }
             }
 
@@ -146,8 +146,8 @@ counter! {
     AtomicI32: i32;
     AtomicU64: u64;
     AtomicI64: i64;
-    AtomicUsize: usize;
-    AtomicIsize: isize;
+    //AtomicUsize: usize;
+    //AtomicIsize: isize;
 }
 
 #[cfg(feature = "nostd")]
@@ -160,8 +160,8 @@ counter! {
     Atomic<i32>: i32;
     Atomic<u64>: u64;
     Atomic<i64>: i64;
-    Atomic<usize>: usize;
-    Atomic<isize>: isize;
+    //Atomic<usize>: usize;
+    //Atomic<isize>: isize;
     Atomic<u128>: u128;
     Atomic<i128>: i128;
 }
